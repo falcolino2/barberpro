@@ -22,15 +22,20 @@ const now = () => new Date().toISOString();
 
 function getHours(s) {
   const slots = [];
-  const [oh,om] = s.open_time.split(':').map(Number);
-  const [ch,cm] = s.close_time.split(':').map(Number);
-  const [lsh,lsm] = s.lunch_start.split(':').map(Number);
-  const [leh,lem] = s.lunch_end.split(':').map(Number);
+  const openTime   = s.openTime   || s.open_time   || '08:00';
+  const closeTime  = s.closeTime  || s.close_time  || '19:00';
+  const lunchEnabled = s.lunchEnabled !== undefined ? s.lunchEnabled : (s.lunch_enabled !== undefined ? s.lunch_enabled : true);
+  const lunchStart = s.lunchStart || s.lunch_start || '12:00';
+  const lunchEnd   = s.lunchEnd   || s.lunch_end   || '13:00';
+  const [oh,om] = openTime.split(':').map(Number);
+  const [ch,cm] = closeTime.split(':').map(Number);
+  const [lsh,lsm] = lunchStart.split(':').map(Number);
+  const [leh,lem] = lunchEnd.split(':').map(Number);
   let h=oh,m=om;
   while(h*60+m<ch*60+cm){
     const ts=`${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}`;
     const mins=h*60+m;
-    if(!s.lunch_enabled||mins<lsh*60+lsm||mins>=leh*60+lem)slots.push(ts);
+    if(!lunchEnabled||mins<lsh*60+lsm||mins>=leh*60+lem)slots.push(ts);
     m+=30;if(m>=60){h++;m-=60;}
   }
   return slots;
@@ -269,9 +274,9 @@ app.put('/api/:shopId/profile',auth,shopAuth,async(req,res)=>{
 // Settings
 app.get('/api/:shopId/settings',async(req,res)=>{
   const s=await getSettings(req.params.shopId);
-  if(!req.headers.authorization)return res.json({open_days:s.open_days,open_time:s.open_time,close_time:s.close_time});
+  if(!req.headers.authorization)return res.json({openDays:s.openDays,openTime:s.openTime,closeTime:s.closeTime});
   try{const u=jwt.verify(req.headers.authorization.split(' ')[1],SECRET);if(u.role==='admin'||u.role==='superadmin')return res.json(s);}catch{}
-  res.json({open_days:s.open_days,open_time:s.open_time,close_time:s.close_time});
+  res.json({openDays:s.openDays,openTime:s.openTime,closeTime:s.closeTime});
 });
 app.put('/api/:shopId/settings',auth,shopAuth,shopAdmin,async(req,res)=>{
   const b = req.body;
@@ -303,7 +308,8 @@ app.get('/api/:shopId/available',async(req,res)=>{
   if(!date)return res.status(400).json({error:'Data obrigatória'});
   const s=await getSettings(req.params.shopId);
   const dow=new Date(date+'T12:00').getDay();
-  if(!s.open_days.includes(dow))return res.json([]);
+  const openDays = s.openDays || s.open_days || [1,2,3,4,5,6];
+  if(!openDays.includes(dow))return res.json([]);
   let bQ=sb.from('appointments').select('time').eq('shop_id',req.params.shopId).eq('date',date).neq('status','cancelled');
   if(barberId)bQ=bQ.eq('barber_id',barberId);
   const {data:booked}=await bQ;
