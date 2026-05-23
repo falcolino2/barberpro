@@ -274,9 +274,26 @@ app.get('/api/:shopId/settings',async(req,res)=>{
   res.json({open_days:s.open_days,open_time:s.open_time,close_time:s.close_time});
 });
 app.put('/api/:shopId/settings',auth,shopAuth,shopAdmin,async(req,res)=>{
-  const existing=await getSettings(req.params.shopId);
-  if(existing.shop_id){await sb.from('shop_settings').update(req.body).eq('shop_id',req.params.shopId);}
-  else{await sb.from('shop_settings').insert({shop_id:req.params.shopId,...req.body});}
+  const b = req.body;
+  // Convert camelCase to snake_case for Supabase
+  const update = {
+    open_days:       b.openDays       !== undefined ? b.openDays       : b.open_days,
+    open_time:       b.openTime       !== undefined ? b.openTime       : b.open_time,
+    close_time:      b.closeTime      !== undefined ? b.closeTime      : b.close_time,
+    lunch_enabled:   b.lunchEnabled   !== undefined ? b.lunchEnabled   : b.lunch_enabled,
+    lunch_start:     b.lunchStart     !== undefined ? b.lunchStart     : b.lunch_start,
+    lunch_end:       b.lunchEnd       !== undefined ? b.lunchEnd       : b.lunch_end,
+    whatsapp_enabled:b.whatsappEnabled!== undefined ? b.whatsappEnabled: b.whatsapp_enabled,
+    whatsapp_number: b.whatsappNumber !== undefined ? b.whatsappNumber : b.whatsapp_number,
+    reminder_enabled:b.reminderEnabled!== undefined ? b.reminderEnabled: b.reminder_enabled,
+    reminder_hours:  b.reminderHours  !== undefined ? b.reminderHours  : b.reminder_hours,
+    monthly_goal:    b.monthlyGoal    !== undefined ? b.monthlyGoal    : b.monthly_goal,
+  };
+  // Remove undefined values
+  Object.keys(update).forEach(k => update[k] === undefined && delete update[k]);
+  const existing = await getSettings(req.params.shopId);
+  if(existing.shop_id){await sb.from('shop_settings').update(update).eq('shop_id',req.params.shopId);}
+  else{await sb.from('shop_settings').insert({shop_id:req.params.shopId,...update});}
   res.json(await getSettings(req.params.shopId));
 });
 
