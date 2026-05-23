@@ -359,13 +359,13 @@ app.post('/api/:shopId/appointments/admin',auth,shopAuth,shopAdmin,async(req,res
   res.json(data);
 });
 app.post('/api/:shopId/appointments',auth,shopAuth,async(req,res)=>{
-  const {serviceId,barberId,date,time}=req.body;
+  const {serviceId,barberId,date,time,couponCode,discount}=req.body;
   if(!serviceId||!barberId||!date||!time)return res.status(400).json({error:'Dados incompletos'});
   const {data:conflict}=await sb.from('appointments').select('id').eq('shop_id',req.params.shopId).eq('date',date).eq('time',time).eq('barber_id',barberId).neq('status','cancelled').single();
   if(conflict)return res.status(400).json({error:'Horário já ocupado'});
   const {data:blocked}=await sb.from('blocked_slots').select('id').eq('shop_id',req.params.shopId).eq('date',date).eq('time',time).single();
   if(blocked)return res.status(400).json({error:'Horário bloqueado'});
-  const {data}=await sb.from('appointments').insert({shop_id:req.params.shopId,client_id:req.user.id,client_name:req.user.name,service_id:serviceId,barber_id:barberId,date,time,status:'confirmed'}).select('*, service:services(*), barber:barbers(*)').single();
+  const {data}=await sb.from('appointments').insert({shop_id:req.params.shopId,client_id:req.user.id,client_name:req.user.name,service_id:serviceId,barber_id:barberId,date,time,status:'confirmed',coupon_code:couponCode||null,discount:discount||0}).select('*, service:services(*), barber:barbers(*)').single();
   res.json(data);
 });
 app.put('/api/:shopId/appointments/:id',auth,shopAuth,async(req,res)=>{
