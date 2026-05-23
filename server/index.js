@@ -248,6 +248,22 @@ app.post('/api/auth/login',async(req,res)=>{
   }catch(e){res.status(500).json({error:e.message});}
 });
 
+// Reset password (sem token — usa celular como identificação)
+app.post('/api/auth/reset-password',async(req,res)=>{
+  try{
+    const {phone,newPassword,shopId}=req.body;
+    const raw=phone?.replace(/\D/g,'');
+    if(!raw||!newPassword)return res.status(400).json({error:'Dados incompletos'});
+    if(newPassword.length<6)return res.status(400).json({error:'Senha mínima 6 caracteres'});
+    let q=sb.from('users').select('id').eq('phone',raw);
+    if(shopId)q=q.eq('shop_id',shopId);
+    const {data:users}=await q;
+    if(!users||users.length===0)return res.status(404).json({error:'Celular não encontrado'});
+    await sb.from('users').update({password:bcrypt.hashSync(newPassword,10)}).eq('id',users[0].id);
+    res.json({ok:true});
+  }catch(e){res.status(500).json({error:e.message});}
+});
+
 // Profile
 app.get('/api/:shopId/profile',auth,shopAuth,async(req,res)=>{
   const {data}=await sb.from('users').select('id,name,phone,role,avatar').eq('id',req.user.id).single();
