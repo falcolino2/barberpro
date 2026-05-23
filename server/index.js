@@ -40,7 +40,21 @@ const DEFAULT_SETTINGS = { open_days:[1,2,3,4,5,6], open_time:'08:00', close_tim
 
 async function getSettings(shopId) {
   const { data } = await sb.from('shop_settings').select('*').eq('shop_id',shopId).single();
-  return data || DEFAULT_SETTINGS;
+  const s = data || DEFAULT_SETTINGS;
+  return {
+    ...s,
+    openDays: s.open_days || [1,2,3,4,5,6],
+    openTime: s.open_time || '08:00',
+    closeTime: s.close_time || '19:00',
+    lunchEnabled: s.lunch_enabled !== undefined ? s.lunch_enabled : true,
+    lunchStart: s.lunch_start || '12:00',
+    lunchEnd: s.lunch_end || '13:00',
+    whatsappEnabled: s.whatsapp_enabled || false,
+    whatsappNumber: s.whatsapp_number || '',
+    reminderEnabled: s.reminder_enabled || false,
+    reminderHours: s.reminder_hours || 24,
+    monthlyGoal: s.monthly_goal || 0,
+  };
 }
 
 // Auto-expiry
